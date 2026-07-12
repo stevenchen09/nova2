@@ -15,6 +15,9 @@ export interface PriceConfig {
   cuttingFee: number; // 元/个
   taxRate: number; // 例如 1.13 表示 13% 税，1.0 表示无税
   mode: PricingMode;
+  // 重量配置
+  weightPerMeter: number; // kg/m
+  weightPerAccessorySet: number; // kg/套
 }
 
 export interface FrameItem {
@@ -62,4 +65,58 @@ export interface GroupResult {
   totalQuantity: number;
   // 明细数据用于显示
   avgMetersPerFrame: number;
+  // 重量结果 (可选)
+  totalWeight?: number;
+  materialWeight?: number;
+  accessoryWeight?: number;
+  // 成本结果 (并行计算)
+  totalCost?: number;
+  materialCost?: number;
+  accessoryCost?: number;
+  cuttingCost?: number;
+  profit?: number;
+  profitMargin?: number;
 }
+
+export interface CostRecord {
+  id: string;
+  model: string;
+  color: string;
+  materialCost: number; // 材料成本单价，元/米
+  accessoryCost: number; // 配件成本单价，元/套
+  cuttingCost: number; // 切割成本单价，元/个
+  notes?: string;
+  updatedAt: string;
+}
+
+export interface HistoryRecord {
+  id: string;
+  clientName: string;
+  orderName: string;
+  createdAt: string;
+  items: FrameItem[];
+  priceConfig: PriceConfig;
+  results: GroupResult[];
+  totalQuotePrice: number;
+  totalCostPrice: number;
+  profit: number;
+  profitMargin: number;
+  notes?: string;
+}
+
+export interface AiSettings {
+  provider: 'gemini' | 'deepseek' | 'openai';
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+}
+
+export interface UserAccount {
+  username: string;
+  role: 'admin' | 'sales' | 'operator';
+  displayName: string;
+  avatarColor: string;
+  password?: string;
+  createdAt: string;
+}
+

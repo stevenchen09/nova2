@@ -1,7 +1,8 @@
 {
   "name": "铝合金切框算料助手",
   "description": "专业铝合金门窗框料计算工具，支持外径/内径算法、锯片损耗、整支材料利用率优化及双模式自动报价。",
-  "requestFramePermissions": [
-    "camera"
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

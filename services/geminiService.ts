@@ -2,8 +2,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { FrameItem, SizeType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const extractionSchema = {
   type: Type.ARRAY,
   items: {
@@ -20,37 +18,50 @@ const extractionSchema = {
   },
 };
 
-export async function parseOrderContent(text: string, base64Image?: string): Promise<FrameItem[]> {
+export interface FilePayload {
+  mimeType: string;
+  data: string; // base64
+}
+
+export async function parseOrderContent(text: string, filePayload?: FilePayload): Promise<FrameItem[]> {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
     const parts: any[] = [
-      { text: `从以下内容中提取铝合金切框订单信息。
+      { text: `你是一个专业的铝合金加工订单识别助手。
+      请从提供的【文本】或【文件（图片/PDF/文档）】中提取订单信息。
+      
       规则：
       1. 提取型号、颜色、外径/内径、宽(cm)、高(cm)、数量(个)。
-      2. 如果尺寸为 "80*60" 则宽80，高60。
-      3. 如果未指定数量，默认为1。
-      4. 输出必须严格遵守JSON格式。` }
+      2. 尺寸解析：如 "80*60" 识别为 宽80，高60。
+      3. 默认值：如果未指定数量，默认为1；如果未指定尺寸类型，默认为"外径"。
+      4. 容错性：如果包含多行，请全部提取。
+      5. 输出必须严格遵守JSON格式数组。` }
     ];
 
-    if (text) parts.push({ text: `文本内容: "${text}"` });
-    if (base64Image) {
+    if (text) {
+      parts.push({ text: `手动录入文本: "${text}"` });
+    }
+
+    if (filePayload) {
       parts.push({
         inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Image.split(',')[1] || base64Image,
+          mimeType: filePayload.mimeType,
+          data: filePayload.data,
         },
       });
     }
 
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: [{ parts }],
+      contents: { parts },
       config: {
         responseMimeType: "application/json",
         responseSchema: extractionSchema,
       },
     });
 
-    const results = JSON.parse(response.text);
+    const results = JSON.parse(response.text || '[]');
     return results.map((r: any, index: number) => ({
       ...r,
       id: `ai-${Date.now()}-${index}`,
