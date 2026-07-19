@@ -1,0 +1,68 @@
+%% 查价逻辑流程（含颜色复用规则）
+%% Nova2 V5-Incremental Design
+
+sequenceDiagram
+    participant QW as QuoteWorkspace
+    participant Calc as calculateGroupedResults
+    participant DB as costDatabase
+    participant Rules as colorReuseRules
+
+    QW->>Calc: calculateGroupedResults(items, priceConfig, showWeight, costDatabase, colorReuseRules)
+    Calc->>Calc: 按 model+color 分组
+
+    loop 每个分组
+        Calc->>DB: 1. 精确匹配 find(model匹配 && color匹配)
+        alt 精确匹配成功
+            DB-->>Calc: costRecord (exact)
+            Calc->>Calc: priceSource = 'exact'
+            Calc->>Calc: weightSource = 'exact'
+            Calc->>Calc: costMaterial = record.materialCost
+            Calc->>Calc: weight = record.weightPerMeter
+        else 精确匹配失败
+            Calc->>Rules: 2. 查找复用规则 find(sourceColor === color)
+            alt 找到复用规则
+                Calc->>DB: 用 targetColor 查找 find(model匹配 && color === targetColor)
+                alt 复用匹配成功
+                    DB-->>Calc: costRecord (reuse)
+                    Calc->>Calc: priceSource = 'reuse'
+                    Calc->>Calc: weightSource = 'reuse'
+                    Calc->>Calc: reusedTargetColor = rule.targetColor
+                    Calc->>Calc: costMaterial = record.materialCost
+                    Calc->>Calc: weight = record.weightPerMeter
+                else 复用匹配失败
+                    Calc->>DB: 3. 型号回退 find(model匹配)
+                    alt 型号回退成功
+                        DB-->>Calc: costRecord (model-fallback)
+                        Calc->>Calc: priceSource = 'model-fallback'
+                        Calc->>Calc: weightSource = 'model-fallback'
+                        Calc->>Calc: costMaterial = record.materialCost
+                        Calc->>Calc: weight = record.weightPerMeter
+                    else 全部失败
+                        Calc->>Calc: 4. 估算 costMaterial = materialPrice × 0.6
+                        Calc->>Calc: weightSource = 'global-default'
+                        Calc->>Calc: weight = config.defaultWeightPerMeter
+                    end
+                end
+            else 无复用规则
+                Calc->>DB: 3. 型号回退 find(model匹配)
+                alt 型号回退成功
+                    DB-->>Calc: costRecord (model-fallback)
+                    Calc->>Calc: priceSource = 'model-fallback'
+                    Calc->>Calc: weightSource = 'model-fallback'
+                else 全部失败
+                    Calc->>Calc: 4. 估算
+                    Calc->>Calc: weightSource = 'global-default'
+                end
+            end
+        end
+
+        Calc->>Calc: 检查 weightOverrides[groupId]
+        alt 存在手动覆盖
+            Calc->>Calc: weight = overrides[groupId]
+            Calc->>Calc: weightSource = 'manual-override'
+        end
+
+        Calc->>Calc: 计算报价轨道 + 成本轨道 + 重量
+    end
+
+    Calc-->>QW: GroupResult[]

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* 自定义样式 - 从 index.html 内联样式提取 */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #e2e8f0;
+  border-radius: 10px;
+}
+
+/* active scale utility (used in login/register buttons) */
+.active\:scale-98:active {
+  transform: scale(0.98);
+}
+
+/* ===== 打印样式 ===== */
+@media print {
+  body * { visibility: hidden; }
+  .printable-area, .printable-area * { visibility: visible; }
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+  }
+  .no-print { display: none !important; }
+  nav, .sidebar-nav, button:not(.print-btn), [role="tab"], .tab-buttons { 
+    display: none !important; 
+  }
+}

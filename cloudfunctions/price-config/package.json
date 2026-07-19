@@ -1,0 +1,9 @@
+{
+  "name": "price-config",
+  "version": "1.0.0",
+  "description": "全局费率配置读写云函数（管理员可改，销售读报价轨，工厂不可见）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.5.0"
+  }
+}

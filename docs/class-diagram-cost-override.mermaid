@@ -1,0 +1,94 @@
+classDiagram
+    class App {
+        +costOverride: CostOverride | null
+        +setCostOverride: Dispatch~SetStateAction~CostOverride|null~~
+        +priceConfig: PriceConfig
+        +calc: UseCalculationReturn
+        +handleLoadHistory(record: HistoryRecord): void
+        -detectCostOverride(snapshot: PriceConfig, current: PriceConfig): CostOverride | null
+    }
+
+    class QuoteWorkspace {
+        +priceConfig: PriceConfig
+        +costOverride: CostOverride | null
+        +setCostOverride: Dispatch~SetStateAction~CostOverride|null~~
+        -effectiveConfig: PriceConfig
+        +useLayoutEffect(): void
+        -calculateEffectiveConfig(): PriceConfig
+        -handleSaveToHistory(effectiveConfig: PriceConfig): Promise~void~
+        -handleClearAll(): void
+    }
+
+    class CostOverridePanel {
+        +costOverride: CostOverride | null
+        +setCostOverride: Dispatch~SetStateAction~CostOverride|null~~
+        +globalPriceConfig: PriceConfig
+        -isEnabled: boolean
+        -handleToggle(enabled: boolean): void
+        -handleFieldChange(field: string, value: number): void
+        -handleReset(): void
+        -initFromGlobal(): CostOverride
+    }
+
+    class ResultsDashboard {
+        +results: GroupResult[]
+        +priceConfig: PriceConfig
+        +hasCostOverride: boolean
+        -renderCostBreakdown(group: GroupResult): JSX
+        -renderCustomCostBadge(): JSX | null
+    }
+
+    class UseCalculationReturn {
+        +saveCurrentToHistory(effectiveConfig: PriceConfig): Promise~void~
+        +clearAll(onClearOverride?: () => void): void
+    }
+
+    class HistoryPanel {
+        +onLoadRecord: (record: HistoryRecord) => void
+    }
+
+    class PriceConfig {
+        +materialPrice: number
+        +mode: PricingMode
+        +quoteAccessoryPrice: number
+        +quoteCuttingFee: number
+        +quoteTaxRate: number
+        +costAccessoryPrice: number
+        +costCuttingFee: number
+        +costTaxRate: number
+        +defaultWeightPerMeter: number
+        +defaultWeightPerAccessorySet: number
+        +colorReuseRules: ColorReuseRule[]
+    }
+
+    class CostOverride {
+        +costAccessoryPrice: number
+        +costCuttingFee: number
+        +costTaxRate: number
+    }
+
+    class HistoryRecord {
+        +id: string
+        +clientName: string
+        +orderName: string
+        +createdAt: string
+        +items: FrameItem[]
+        +priceConfig: PriceConfig
+        +results: GroupResult[]
+        +totalQuotePrice: number
+        +totalCostPrice: number
+        +profit: number
+        +profitMargin: number
+    }
+
+    App --> QuoteWorkspace : renders
+    App --> CostOverride : owns state
+    App --> HistoryPanel : renders
+    App --> detectCostOverride : calls
+    QuoteWorkspace --> CostOverridePanel : renders
+    QuoteWorkspace --> ResultsDashboard : renders
+    QuoteWorkspace --> PriceConfig : computes effectiveConfig
+    QuoteWorkspace --> UseCalculationReturn : uses calc
+    CostOverride ..|> PriceConfig : partial overlap (cost* fields only)
+    HistoryPanel --> HistoryRecord : loads
+    HistoryRecord --> PriceConfig : contains snapshot

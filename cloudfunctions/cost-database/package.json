@@ -1,0 +1,9 @@
+{
+  "name": "cost-database",
+  "version": "1.0.0",
+  "description": "成本资料库 CRUD 云函数（管理员可写，销售只读脱敏，工厂不可见）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.5.0"
+  }
+}

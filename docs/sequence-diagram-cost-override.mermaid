@@ -1,0 +1,52 @@
+sequenceDiagram
+    participant User
+    participant CostOverridePanel
+    participant QuoteWorkspace
+    participant useLayoutEffect
+    participant calculateGroupedResults
+    participant ResultsDashboard
+
+    Note over User,ResultsDashboard: 场景1: 编辑覆盖值
+
+    User->>CostOverridePanel: 打开覆盖开关
+    CostOverridePanel->>CostOverridePanel: 初始化 costOverride = { 当前全局值 }
+    CostOverridePanel->>QuoteWorkspace: setCostOverride(override)
+    QuoteWorkspace->>QuoteWorkspace: effectiveConfig = {...priceConfig, ...override}
+    QuoteWorkspace->>useLayoutEffect: 依赖项 costOverride 变化触发
+    useLayoutEffect->>calculateGroupedResults: calculate(items, effectiveConfig, ...)
+    calculateGroupedResults-->>useLayoutEffect: 返回新 results
+    useLayoutEffect->>ResultsDashboard: setResults(res)
+    ResultsDashboard-->>User: 显示"自定义成本"标签 + 更新结果
+
+    User->>CostOverridePanel: 修改 costAccessoryPrice = 12.5
+    CostOverridePanel->>QuoteWorkspace: setCostOverride({...override, costAccessoryPrice: 12.5})
+    QuoteWorkspace->>QuoteWorkspace: 重新计算 effectiveConfig
+    useLayoutEffect->>calculateGroupedResults: 重算
+    calculateGroupedResults-->>ResultsDashboard: 更新结果
+
+    Note over User,ResultsDashboard: 场景2: 保存历史
+
+    User->>QuoteWorkspace: 点击"保存本单报价"
+    QuoteWorkspace->>QuoteWorkspace: saveCurrentToHistory(effectiveConfig)
+    Note right of QuoteWorkspace: 关键：快照使用 effectiveConfig<br/>而非原始 priceConfig
+    QuoteWorkspace->>QuoteWorkspace: newRecord.priceConfig = {...effectiveConfig}
+    QuoteWorkspace-->>User: alert("已保存至云端")
+
+    Note over User,ResultsDashboard: 场景3: 载入历史恢复覆盖
+
+    User->>QuoteWorkspace: 在 HistoryPanel 点击"载入此单"
+    QuoteWorkspace->>QuoteWorkspace: calc.setItems(record.items)
+    QuoteWorkspace->>QuoteWorkspace: 恢复 clientName / orderName
+    QuoteWorkspace->>QuoteWorkspace: detectCostOverride(snapshot, currentGlobal)
+    Note right of QuoteWorkspace: 检测快照 cost* 与当前全局 cost* 差异<br/>不调用 cloud.setPriceConfig
+    QuoteWorkspace->>QuoteWorkspace: setCostOverride(detectedOverride)
+    QuoteWorkspace->>QuoteWorkspace: setActiveTab('quote')
+    Note right of QuoteWorkspace: useLayoutEffect 触发重算<br/>effectiveConfig 恢复快照计算结果
+
+    Note over User,ResultsDashboard: 场景4: 关闭覆盖/重置
+
+    User->>CostOverridePanel: 关闭覆盖开关
+    CostOverridePanel->>QuoteWorkspace: setCostOverride(null)
+    QuoteWorkspace->>QuoteWorkspace: effectiveConfig = priceConfig（回退全局）
+    QuoteWorkspace->>ResultsDashboard: hasCostOverride = false
+    ResultsDashboard-->>User: 隐藏"自定义成本"标签，显示全局值结果

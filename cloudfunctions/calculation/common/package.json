@@ -1,0 +1,9 @@
+{
+  "name": "common",
+  "version": "1.0.0",
+  "description": "云函数公共模块（鉴权 + 数据库封装），不单独部署，被其他云函数 require",
+  "private": true,
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.5.0"
+  }
+}

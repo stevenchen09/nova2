@@ -1,0 +1,55 @@
+{
+  "version": "2.0",
+  "envId": "nova2-d8gpufz16138b40a2",
+  "functionRoot": "./cloudfunctions",
+  "functions": [
+    {
+      "name": "ai-proxy",
+      "timeout": 30,
+      "runtime": "Nodejs16.13",
+      "codePath": "./cloudfunctions/ai-proxy",
+      "installDependency": true,
+      "triggers": []
+    },
+    {
+      "name": "auth-manage",
+      "timeout": 10,
+      "runtime": "Nodejs16.13",
+      "codePath": "./cloudfunctions/auth-manage",
+      "installDependency": true,
+      "triggers": []
+    },
+    {
+      "name": "cost-database",
+      "timeout": 10,
+      "runtime": "Nodejs16.13",
+      "codePath": "./cloudfunctions/cost-database",
+      "installDependency": true,
+      "triggers": []
+    },
+    {
+      "name": "price-config",
+      "timeout": 10,
+      "runtime": "Nodejs16.13",
+      "codePath": "./cloudfunctions/price-config",
+      "installDependency": true,
+      "triggers": []
+    },
+    {
+      "name": "calculation",
+      "timeout": 10,
+      "runtime": "Nodejs16.13",
+      "codePath": "./cloudfunctions/calculation",
+      "installDependency": true,
+      "triggers": []
+    },
+    {
+      "name": "share-order",
+      "timeout": 10,
+      "runtime": "Nodejs16.13",
+      "codePath": "./cloudfunctions/share-order",
+      "installDependency": true,
+      "triggers": []
+    }
+  ]
+}

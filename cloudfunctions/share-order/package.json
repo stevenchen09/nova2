@@ -1,0 +1,9 @@
+{
+  "name": "share-order",
+  "version": "1.0.0",
+  "description": "领料单生成/分享/查看云函数（6位分享码 + 7天有效期 + 权限过滤）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.5.0"
+  }
+}

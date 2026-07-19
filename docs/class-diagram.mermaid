@@ -1,0 +1,160 @@
+%% Nova2 V5-Incremental 类图
+%% 颜色复用规则 + 即时更新修复 + 重量反馈
+
+classDiagram
+    class ColorReuseRule {
+        +sourceColor: string
+        +targetColor: string
+    }
+
+    class WeightSource {
+        <<enumeration>>
+        exact
+        reuse
+        model-fallback
+        global-default
+        manual-override
+    }
+
+    class PriceSource {
+        <<enumeration>>
+        exact
+        reuse
+        model-fallback
+    }
+
+    class PriceConfig {
+        +materialPrice: number
+        +mode: PricingMode
+        +quoteAccessoryPrice: number
+        +quoteCuttingFee: number
+        +quoteTaxRate: number
+        +costAccessoryPrice: number
+        +costCuttingFee: number
+        +costTaxRate: number
+        +defaultWeightPerMeter: number
+        +defaultWeightPerAccessorySet: number
+        +colorReuseRules: ColorReuseRule[]
+    }
+
+    class CostRecord {
+        +id: string
+        +model: string
+        +color: string
+        +materialCost: number
+        +weightPerMeter: number
+        +notes: string
+        +updatedAt: string
+    }
+
+    class GroupResult {
+        +model: string
+        +color: string
+        +totalBars: number
+        +totalPrice: number
+        +totalCost: number
+        +profit: number
+        +profitMargin: number
+        +actualWeightPerMeter: number
+        +priceSource: PriceSource
+        +weightSource: WeightSource
+        +reusedTargetColor: string
+        +packingComparison: PackingComparison
+    }
+
+    class FrameItem {
+        +id: string
+        +model: string
+        +color: string
+        +sizeType: SizeType
+        +width: number
+        +height: number
+        +quantity: number
+    }
+
+    class UseCloudDataReturn {
+        +costDatabase: CostRecord[]
+        +priceConfig: PriceConfig
+        +persistPriceConfig(config: PriceConfig) Promise~PriceConfig~
+        +updateCostRecord(record: CostRecord) Promise~CostRecord~
+        +createCostRecord(record: CostRecord) Promise~CostRecord~
+        +refreshCostDatabase() Promise~void~
+        +refreshPriceConfig() Promise~void~
+    }
+
+    class UseCalculationReturn {
+        +items: FrameItem[]
+        +results: GroupResult[]
+        +setItems: Dispatch
+        +setResults: Dispatch
+        +weightOverrides: Record~string_number~
+        +setWeightOverrides: Dispatch
+        +addItemByText(text: string) Promise~void~
+        +clearAll() void
+        +saveCurrentToHistory() Promise~void~
+    }
+
+    class ColorReuseRulesModal {
+        +rules: ColorReuseRule[]
+        +onSave(rules: ColorReuseRule[]) Promise~void~
+        +onClose() void
+        -draftRules: ColorReuseRule[]
+        -handleAdd() void
+        -handleDelete(index: number) void
+        -handleSave() Promise~void~
+    }
+
+    class CostDatabasePanel {
+        +costDatabase: CostRecord[]
+        +priceConfig: PriceConfig
+        +onPersistPriceConfig(config: PriceConfig) Promise~PriceConfig~
+        +onUpdateCostRecord(record: CostRecord) Promise~CostRecord~
+        -showReuseModal: boolean
+        -costRateDraft: PriceConfig
+        -handleSaveCostRates() Promise~void~
+        -handleSaveReuseRules(rules) Promise~void~
+        -getReuseTag(color: string) string
+    }
+
+    class QuoteWorkspace {
+        +priceConfig: PriceConfig
+        +costDatabase: CostRecord[]
+        +calc: UseCalculationReturn
+        -useLayoutEffect: recalculate on deps change
+    }
+
+    class ResultsDashboard {
+        +results: GroupResult[]
+        +priceConfig: PriceConfig
+        +weightOverrides: Record~string_number~
+        +onWeightOverride(groupId: string, value: number) void
+        -renderPriceSourceBadge(group: GroupResult) JSX
+        -renderWeightSourceLabel(group: GroupResult) JSX
+        -renderWeightOverrideInput(group: GroupResult) JSX
+    }
+
+    class CalculateGroupedResults {
+        <<function>>
+        +items: FrameItem[]
+        +config: PriceConfig
+        +includeWeight: boolean
+        +costDatabase: CostRecord[]
+        +colorReuseRules: ColorReuseRule[]
+        +weightOverrides: Record~string_number~
+    }
+
+    ColorReuseRule --> PriceConfig : stored as field
+    PriceConfig --> UseCloudDataReturn : managed by
+    CostRecord --> UseCloudDataReturn : managed by
+    UseCloudDataReturn --> QuoteWorkspace : provides props
+    UseCalculationReturn --> QuoteWorkspace : provides calc
+    QuoteWorkspace --> ResultsDashboard : renders
+    CostDatabasePanel --> ColorReuseRulesModal : opens modal
+    GroupResult --> ResultsDashboard : displayed in
+    FrameItem --> CalculateGroupedResults : input
+    PriceConfig --> CalculateGroupedResults : input
+    CostRecord --> CalculateGroupedResults : input
+    ColorReuseRule --> CalculateGroupedResults : input
+    CalculateGroupedResults --> GroupResult : produces
+    WeightSource --> GroupResult : annotates
+    PriceSource --> GroupResult : annotates
