@@ -240,7 +240,11 @@ const PickListDetail: React.FC<PickListDetailProps> = ({
                 {order.results?.[0]?.packingComparison?.selected && (
                   <div className="col-span-2 md:col-span-4">
                     <div className="text-xs text-slate-600">
-                      排料算法：<span className="font-bold text-indigo-600">{order.results[0].packingComparison.selected}</span>
+                      排料算法：<span className="font-bold text-indigo-600">
+                        {order.results[0].packingComparison.selected === 'GLB'
+                          ? 'GLB 全局套裁'
+                          : order.results[0].packingComparison.selected}
+                      </span>
                     </div>
                   </div>
                 )}

@@ -162,6 +162,140 @@ export function packOptimal(edges: CalculatedEdge[], barUsableLength: number): B
 }
 
 /**
+ * GLB（全局套裁）排料算法 — 切割模式枚举 + 整数规划
+ *
+ * 适用场景：单尺寸批量（长边/短边两类长度）时，FFD/Optimal 都是"逐支局部贪心"，
+ * 只保证当前支最省，无法保证全局长短边配比平衡，会留下"配比失衡尾巴"。
+ * GLB 直接求解 1D 切割下料问题（Cutting Stock Problem）的精确解：
+ *
+ *   1. 枚举所有可行切割模式 pattern = (a 根长边 + b 根短边)，
+ *      其中 a ∈ [0, kmax]，kmax = ⌊B / L⌋（一根料最多开几根长边），
+ *            b = ⌊(B − a·L) / S⌋。
+ *   2. 用 DP 求最少杆数：dp[r][j] = 用 r 根料、长边产出（截断到 nL）为 j 时的最大短边数。
+ *   3. 回溯模式序列，按序从长/短边池取边生成 BarPlan（自然截断富余边）。
+ *
+ * 关键量：长边整料开数 kmax 越小（长边越长），贪心配比失衡越严重，本算法越省。
+ * 例如 50.4×80.4cm 外径：L=819mm, kmax=3，FFD/Optimal 需 112 支，GLB 仅 110 支。
+ *
+ * 长度种类 > 2（组内混合多种尺寸）或单长度时回退 packOptimal，保证安全。
+ * 复杂度 O(maxBars × nL × kmax)，nL<1000 时 <10ms。
+ */
+export function packGlobal(edges: CalculatedEdge[], barUsableLength: number): BarPlan[] {
+  const SCALE = 1000;
+  const B = Math.floor(barUsableLength * SCALE);
+  if (edges.length === 0) return [];
+
+  // 1. 按长度(mm)分组
+  const byLen = new Map<number, CalculatedEdge[]>();
+  for (const e of edges) {
+    const len = Math.floor(e.length * SCALE);
+    if (!byLen.has(len)) byLen.set(len, []);
+    byLen.get(len)!.push(e);
+  }
+  const lens = [...byLen.keys()].sort((a, b) => b - a);
+
+  // 2. 长度种类 > 2 回退 packOptimal（本算法仅针对"长边+短边"两类长度）
+  if (lens.length > 2) return packOptimal(edges, barUsableLength);
+
+  // 3. 长边 L / 短边 S 与各自数量
+  const L = lens[0];
+  const S = lens.length === 2 ? lens[1] : 0;
+  const nL = byLen.get(L)!.length;
+  const nS = S > 0 ? byLen.get(S)!.length : 0;
+
+  // 4. 单长度边界：每根塞 ⌊B/L⌋ 根
+  if (S === 0) {
+    const perBar = Math.max(1, Math.floor(B / L));
+    const pool = [...byLen.get(L)!];
+    const bars: BarPlan[] = [];
+    while (pool.length > 0) {
+      const segs = pool.splice(0, perBar);
+      const totalLen = segs.reduce((s, e) => s + e.length, 0);
+      bars.push({
+        totalUsableLength: barUsableLength,
+        segments: segs,
+        remaining: Number((barUsableLength - totalLen).toFixed(4)),
+      });
+    }
+    return bars;
+  }
+
+  // 5. 枚举切割模式 [a 长, b 短]
+  const kmax = Math.floor(B / L);
+  const patterns: Array<[number, number]> = [];
+  for (let a = 0; a <= kmax; a++) {
+    patterns.push([a, Math.floor((B - a * L) / S)]);
+  }
+
+  // 6. DP 求最少杆数（长边产出截断到 nL，允许富余长/短边，之后构造时自然裁掉）
+  const maxBars = nL + nS;
+  const dp: number[][] = Array.from({ length: maxBars + 1 }, () => new Array(nL + 1).fill(-1));
+  const prev: Array<Array<{ pj: number; pa: number; pb: number } | null>> = Array.from(
+    { length: maxBars + 1 },
+    () => new Array(nL + 1).fill(null)
+  );
+  dp[0][0] = 0;
+
+  for (let r = 0; r < maxBars; r++) {
+    for (let j = 0; j <= nL; j++) {
+      if (dp[r][j] < 0) continue;
+      for (const [pa, pb] of patterns) {
+        const nj = Math.min(j + pa, nL);
+        const nv = dp[r][j] + pb;
+        if (nv > dp[r + 1][nj]) {
+          dp[r + 1][nj] = nv;
+          prev[r + 1][nj] = { pj: j, pa, pb };
+        }
+      }
+    }
+  }
+
+  // 找最少 r 使 dp[r][nL] >= nS
+  let R = -1;
+  for (let r = 0; r <= maxBars; r++) {
+    if (dp[r][nL] >= nS) { R = r; break; }
+  }
+  if (R === -1) return packOptimal(edges, barUsableLength); // 理论不可达（防御）
+
+  // 7. 回溯模式序列
+  const seq: Array<[number, number]> = [];
+  let r = R;
+  let j = nL;
+  while (r > 0) {
+    const p = prev[r][j];
+    if (!p) break; // 防御
+    seq.push([p.pa, p.pb]);
+    j = p.pj;
+    r--;
+  }
+  seq.reverse();
+
+  // 8. 按模式序列生成 BarPlan（自然截断富余边）
+  const longPool = [...byLen.get(L)!];
+  const shortPool = [...byLen.get(S)!];
+  const plans: BarPlan[] = [];
+  for (const [pa, pb] of seq) {
+    const segs: CalculatedEdge[] = [];
+    for (let i = 0; i < pa && longPool.length > 0; i++) segs.push(longPool.shift()!);
+    for (let i = 0; i < pb && shortPool.length > 0; i++) segs.push(shortPool.shift()!);
+    if (segs.length === 0) continue;
+    const totalLen = segs.reduce((s, e) => s + e.length, 0);
+    plans.push({
+      totalUsableLength: barUsableLength,
+      segments: segs,
+      remaining: Number((barUsableLength - totalLen).toFixed(4)),
+    });
+  }
+
+  // 9. 防御：若仍有边未放置，回退 packOptimal
+  if (longPool.length > 0 || shortPool.length > 0) {
+    return packOptimal(edges, barUsableLength);
+  }
+
+  return plans;
+}
+
+/**
  * 核心逻辑：合并算料与报价（并计算成本与毛利）
  *
  * V2 重构要点：
@@ -230,39 +364,56 @@ export const calculateGroupedResults = (
       }
     });
 
-    // 双算法并行：FFD + Optimal(DP背包)
+    // 三算法并行：FFD + Optimal(DP背包) + GLB(全局套裁)
     const ffdPlans = packFFD(allEdges, BAR_USABLE_LENGTH);
     const optimalPlans = packOptimal(allEdges, BAR_USABLE_LENGTH);
+    const globalPlans = packGlobal(allEdges, BAR_USABLE_LENGTH);
 
-    // 一致性校验：两种算法 segments 总长度必须 ≈ allEdges 总长度（容差 0.0001）
+    // 一致性校验：三种算法 segments 总长度必须 ≈ allEdges 总长度（容差 0.0001）
     const allEdgesSum = allEdges.reduce((s, e) => s + e.length, 0);
-    const ffdSum = ffdPlans.reduce((s, p) => s + p.segments.reduce((ss, e) => ss + e.length, 0), 0);
-    const optimalSum = optimalPlans.reduce((s, p) => s + p.segments.reduce((ss, e) => ss + e.length, 0), 0);
+    const sumOf = (ps: BarPlan[]) => ps.reduce((s, p) => s + p.segments.reduce((ss, e) => ss + e.length, 0), 0);
+    const ffdSum = sumOf(ffdPlans);
+    const optimalSum = sumOf(optimalPlans);
+    const globalSum = sumOf(globalPlans);
     const tolerance = 0.0001;
 
     let plans: BarPlan[];
     let packingComparison: PackingComparison | undefined;
 
-    if (Math.abs(ffdSum - allEdgesSum) < tolerance && Math.abs(optimalSum - allEdgesSum) < tolerance) {
+    if (
+      Math.abs(ffdSum - allEdgesSum) < tolerance &&
+      Math.abs(optimalSum - allEdgesSum) < tolerance &&
+      Math.abs(globalSum - allEdgesSum) < tolerance
+    ) {
       // 校验通过：比较 barCount 选优
       const ffdBarCount = ffdPlans.length;
       const optimalBarCount = optimalPlans.length;
+      const globalBarCount = globalPlans.length;
       const ffdRemainingTotal = ffdPlans.reduce((s, p) => s + p.remaining, 0);
       const optimalRemainingTotal = optimalPlans.reduce((s, p) => s + p.remaining, 0);
+      const globalRemainingTotal = globalPlans.reduce((s, p) => s + p.remaining, 0);
 
-      // Optimal 支数严格小于 FFD 才选 Optimal，否则（含相等）默认 FFD
-      const selected: 'FFD' | 'OPT' = optimalBarCount < ffdBarCount ? 'OPT' : 'FFD';
-      plans = selected === 'OPT' ? optimalPlans : ffdPlans;
+      // 选优：GLB 严格最少 → GLB；否则 Optimal 严格小于 FFD → OPT；否则 FFD
+      let selected: 'FFD' | 'OPT' | 'GLB';
+      if (globalBarCount < ffdBarCount && globalBarCount < optimalBarCount) {
+        selected = 'GLB';
+      } else if (optimalBarCount < ffdBarCount) {
+        selected = 'OPT';
+      } else {
+        selected = 'FFD';
+      }
+      plans = selected === 'GLB' ? globalPlans : selected === 'OPT' ? optimalPlans : ffdPlans;
 
       packingComparison = {
         ffd: { barCount: ffdBarCount, remainingTotal: Number(ffdRemainingTotal.toFixed(4)) },
         opt: { barCount: optimalBarCount, remainingTotal: Number(optimalRemainingTotal.toFixed(4)) },
+        global: { barCount: globalBarCount, remainingTotal: Number(globalRemainingTotal.toFixed(4)) },
         selected,
       };
     } else {
       // 校验失败：回退 FFD
-      console.warn('[排料校验失败] FFD/Optimal segments 总长与 allEdges 不一致，回退 FFD', {
-        allEdgesSum, ffdSum, optimalSum,
+      console.warn('[排料校验失败] 三算法 segments 总长与 allEdges 不一致，回退 FFD', {
+        allEdgesSum, ffdSum, optimalSum, globalSum,
       });
       plans = ffdPlans;
       packingComparison = undefined;

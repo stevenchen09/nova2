@@ -144,8 +144,9 @@ export interface AlgorithmStat {
 /** 排料算法对比结果 */
 export interface PackingComparison {
   ffd: AlgorithmStat;
-  opt: AlgorithmStat;  // Optimal（DP 背包 + 最长边优先）
-  selected: 'FFD' | 'OPT';
+  opt: AlgorithmStat;    // Optimal（DP 背包 + 最长边优先）
+  global: AlgorithmStat; // GLB（全局套裁：切割模式枚举 + 整数规划）
+  selected: 'FFD' | 'OPT' | 'GLB';
 }
 
 /**
@@ -189,7 +190,7 @@ export interface GroupResult {
   totalCuttingLength?: number;     // 总切割长度(米)
   actualWeightPerMeter?: number;   // 实际使用的线密度 kg/m
   priceSource?: 'exact' | 'reuse' | 'model-fallback'; // 查价来源标记
-  packingComparison?: PackingComparison;     // 🆕 排料算法对比结果（FFD vs OPT）
+  packingComparison?: PackingComparison;     // 🆕 排料算法对比结果（FFD vs OPT vs GLB）
 }
 
 /**

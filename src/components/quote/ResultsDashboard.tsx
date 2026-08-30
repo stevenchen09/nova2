@@ -171,17 +171,26 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
   };
 
   /**
-   * 渲染排料算法对比卡片（FFD vs OPT）
+   * 渲染排料算法对比卡片（FFD vs OPT vs GLB）
    */
   const renderPackingComparison = (group: GroupResult) => {
     if (!group.packingComparison) return null;
-    const { ffd, opt, selected } = group.packingComparison;
+    const { ffd, opt, global, selected } = group.packingComparison;
+    const names: Record<'ffd' | 'opt' | 'global', string> = { ffd: 'FFD', opt: 'OPT', global: 'GLB' };
+
+    let summaryText: string;
+    if (selected === 'GLB') {
+      summaryText = `GLB 全局套裁更优，比 FFD 节省 ${ffd.barCount - global.barCount} 支`;
+    } else if (selected === 'OPT' && opt.barCount < ffd.barCount) {
+      summaryText = `OPT 更优，比 FFD 节省 ${ffd.barCount - opt.barCount} 支`;
+    } else {
+      summaryText = '三种算法用料一致，采用 FFD';
+    }
+
     return (
       <details className="mt-2 border border-slate-200 rounded-lg overflow-hidden">
         <summary className="px-3 py-2 bg-slate-50 cursor-pointer text-xs font-bold text-slate-700 hover:bg-slate-100">
-          排料算法对比：{selected === 'OPT' && opt.barCount < ffd.barCount
-            ? `OPT 更优，节省 ${ffd.barCount - opt.barCount} 支`
-            : '两种算法结果一致，采用 FFD'}
+          排料算法对比：{summaryText}
         </summary>
         <div className="p-3">
           <table className="w-full text-xs">
@@ -194,12 +203,12 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
               </tr>
             </thead>
             <tbody>
-              {(['ffd', 'opt'] as const).map((key) => {
+              {(['ffd', 'opt', 'global'] as const).map((key) => {
                 const stat = group.packingComparison![key];
-                const isSelected = group.packingComparison!.selected === key.toUpperCase();
+                const isSelected = group.packingComparison!.selected === names[key];
                 return (
                   <tr key={key} className={`border-b border-slate-100 ${isSelected ? 'bg-emerald-50' : ''}`}>
-                    <td className="py-1.5 font-bold">{key.toUpperCase()}{isSelected && ' ★'}</td>
+                    <td className="py-1.5 font-bold">{names[key]}{isSelected && ' ★'}</td>
                     <td className="text-right">{stat.barCount}</td>
                     <td className="text-right">{stat.remainingTotal}</td>
                     <td className="text-center">{isSelected ? '✅ 已选用' : ''}</td>
