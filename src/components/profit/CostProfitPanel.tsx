@@ -395,7 +395,7 @@ const CostProfitPanel: React.FC<CostProfitPanelProps> = ({
           <span className="text-[10px] text-teal-200 font-semibold">材料成本按切割长度比例分摊</span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left">
+          <table className="w-full min-w-[920px] text-left">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">型号</th>
@@ -407,38 +407,45 @@ const CostProfitPanel: React.FC<CostProfitPanelProps> = ({
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">切工</th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">税金</th>
                 <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">成本小计</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">单框成本</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {results.flatMap(group =>
                 (group.sizeCosts ?? []).map(sc => ({ group, sc }))
-              ).map(({ group, sc }) => (
-                <tr
-                  key={`${group.model}-${group.color}-${sc.itemId}`}
-                  className="hover:bg-slate-50/80 transition-colors"
-                >
-                  <td className="px-4 py-3 text-sm font-bold text-slate-800">{group.model}</td>
-                  <td className="px-4 py-3 text-sm text-slate-600">{group.color}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700">{sc.size}</td>
-                  <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{sc.quantity}</td>
-                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
-                    {showCosts ? `¥${fmt(sc.materialCost)}` : '***'}
-                  </td>
-                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
-                    {showCosts ? `¥${fmt(sc.accessoryCost)}` : '***'}
-                  </td>
-                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
-                    {showCosts ? `¥${fmt(sc.cuttingCost)}` : '***'}
-                  </td>
-                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
-                    {showCosts ? `¥${fmt(sc.taxCost)}` : '***'}
-                  </td>
-                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-bold ${showCosts ? 'text-indigo-700' : 'text-slate-300'}`}>
-                    {showCosts ? `¥${fmt(sc.totalCost)}` : '***'}
-                  </td>
-                </tr>
-              ))}
-              {/* 合计行 = 组级成本总额 */}
+              ).map(({ group, sc }) => {
+                const unitCost = sc.quantity > 0 ? sc.totalCost / sc.quantity : 0;
+                return (
+                  <tr
+                    key={`${group.model}-${group.color}-${sc.itemId}`}
+                    className="hover:bg-slate-50/80 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-sm font-bold text-slate-800">{group.model}</td>
+                    <td className="px-4 py-3 text-sm text-slate-600">{group.color}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700">{sc.size}</td>
+                    <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{sc.quantity}</td>
+                    <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                      {showCosts ? `¥${fmt(sc.materialCost)}` : '***'}
+                    </td>
+                    <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                      {showCosts ? `¥${fmt(sc.accessoryCost)}` : '***'}
+                    </td>
+                    <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                      {showCosts ? `¥${fmt(sc.cuttingCost)}` : '***'}
+                    </td>
+                    <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                      {showCosts ? `¥${fmt(sc.taxCost)}` : '***'}
+                    </td>
+                    <td className={`px-4 py-3 text-sm text-right tabular-nums font-bold ${showCosts ? 'text-indigo-700' : 'text-slate-300'}`}>
+                      {showCosts ? `¥${fmt(sc.totalCost)}` : '***'}
+                    </td>
+                    <td className={`px-4 py-3 text-sm text-right tabular-nums font-bold ${showCosts ? 'text-emerald-700' : 'text-slate-300'}`}>
+                      {showCosts ? `¥${fmt(unitCost)}` : '***'}
+                    </td>
+                  </tr>
+                );
+              })}
+              {/* 合计行 = 组级成本总额；单框成本 = 总成本÷总数量（加权平均） */}
               <tr className="bg-slate-100/60 font-black">
                 <td className="px-4 py-3.5 text-sm text-slate-800" colSpan={4}>合计</td>
                 <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.totalMaterialCost)}` : '***'}</td>
@@ -446,6 +453,11 @@ const CostProfitPanel: React.FC<CostProfitPanelProps> = ({
                 <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.costCuttingCost)}` : '***'}</td>
                 <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.costTaxCost)}` : '***'}</td>
                 <td className="px-4 py-3.5 text-sm text-right text-indigo-700 tabular-nums">{showCosts ? `¥${fmt(aggregated.costGrandTotal)}` : '***'}</td>
+                <td className="px-4 py-3.5 text-sm text-right text-emerald-700 tabular-nums">
+                  {showCosts && aggregated.totalQuotePrice > 0
+                    ? `¥${fmt(aggregated.costGrandTotal / results.reduce((s, r) => s + r.totalQuantity, 0))}`
+                    : '***'}
+                </td>
               </tr>
             </tbody>
           </table>
