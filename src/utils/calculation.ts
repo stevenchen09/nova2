@@ -320,9 +320,28 @@ export const calculateGroupedResults = (
   includeWeight: boolean = false,
   costDatabase: CostRecord[] = []
 ): GroupResult[] => {
+  // 0. 🛡 防御性修复：规范化 item.id，确保每个 item 有唯一 id
+  // 背景：从 localStorage / 历史记录 / AI 解析 / CSV 导入等路径进入的 items，
+  //   偶尔会出现 id 缺失或重复的情况。材料成本按切割长度比例分摊时依赖 item.id
+  //   作为 sourceId 归属边长，若 id 重复/缺失会导致 perItemCuttingLength 错位，
+  //   最终表现为某些尺寸拿到 100% 材料、末项吸收残差变成负成本。
+  // 修复策略：id 缺失则用位置+随机串补齐；id 重复则追加后缀去重。
+  const seenIds = new Set<string>();
+  const normalizedItems = items.map((item, idx) => {
+    let id = item.id;
+    if (!id || id.trim() === '') {
+      id = `__auto_${idx}_${Math.random().toString(36).slice(2, 8)}`;
+    } else if (seenIds.has(id)) {
+      // 同一 id 重复出现：追加位置后缀避免冲撞
+      id = `${id}__dup${idx}_${Math.random().toString(36).slice(2, 6)}`;
+    }
+    seenIds.add(id);
+    return { ...item, id };
+  });
+
   // 1. 严格按型号和颜色分组
   const groups: Record<string, FrameItem[]> = {};
-  items.forEach(item => {
+  normalizedItems.forEach(item => {
     const key = `${item.model || '未指定型号'}-${item.color || '未指定颜色'}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(item);
