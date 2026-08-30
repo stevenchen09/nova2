@@ -1,5 +1,5 @@
 
-import { FrameItem, CalculatedEdge, BarPlan, GroupResult, SizeType, PricingMode, PriceConfig, QuotationLineItem, CostRecord, PackingComparison } from '../types';
+import { FrameItem, CalculatedEdge, BarPlan, GroupResult, SizeType, PricingMode, PriceConfig, QuotationLineItem, CostRecord, PackingComparison, SizeCostDetail } from '../types';
 import { BAR_FULL_LENGTH, BAR_USABLE_LENGTH, CUTTING_LOSS, WALL_THICKNESS } from '../constants';
 
 /**
@@ -565,6 +565,65 @@ export const calculateGroupedResults = (
       totalCostReal = subTotalCost + costTaxCostGroup;
     }
 
+    // === 按尺寸成本拆分 🆕 ===
+    // 材料成本按"切割长度比例"分摊：批量单按实际切割长度（allEdges 中 sourceId 归集），
+    // 零散单按周长×1.2×数量。配件/切工按数量，税金按成本税率。
+    const perItemCuttingLength: Record<string, number> = {};
+    allEdges.forEach(e => {
+      perItemCuttingLength[e.sourceId] = (perItemCuttingLength[e.sourceId] || 0) + e.length;
+    });
+
+    const sizeCosts: SizeCostDetail[] = groupItems.map(item => {
+      const qty = item.quantity;
+      let itemCutLen: number;
+      let itemMaterial: number;
+      if (config.mode === PricingMode.BATCH) {
+        itemCutLen = perItemCuttingLength[item.id] || 0;
+        itemMaterial = totalCuttingLength > 0
+          ? (itemCutLen / totalCuttingLength) * materialCostGroup
+          : 0;
+      } else {
+        const perimeterM = ((item.width + item.height) * 2) / 100;
+        itemCutLen = perimeterM * 1.2 * qty;
+        itemMaterial = itemCutLen * costMaterial;
+      }
+      const itemAccessory = qty * config.costAccessoryPrice;
+      const itemCutting = qty * config.costCuttingFee;
+      const itemTax = (itemMaterial + itemAccessory + itemCutting) * config.costTaxRate;
+
+      return {
+        itemId: item.id,
+        size: `${item.width}x${item.height} (${item.sizeType})`,
+        quantity: qty,
+        cuttingLength: Number(itemCutLen.toFixed(4)),
+        materialCost: Number(itemMaterial.toFixed(2)),
+        accessoryCost: Number(itemAccessory.toFixed(2)),
+        cuttingCost: Number(itemCutting.toFixed(2)),
+        taxCost: Number(itemTax.toFixed(2)),
+        totalCost: Number((itemMaterial + itemAccessory + itemCutting + itemTax).toFixed(2)),
+      };
+    });
+
+    // 末项吸收舍入残差，确保各尺寸四项之和与组级总额严格一致
+    if (sizeCosts.length > 0) {
+      const last = sizeCosts[sizeCosts.length - 1];
+      const others = sizeCosts.slice(0, -1);
+      const sumOf = (arr: SizeCostDetail[], key: 'materialCost' | 'accessoryCost' | 'cuttingCost' | 'taxCost') =>
+        arr.reduce((s, c) => s + c[key], 0);
+
+      // 以组级「已取整到分」的值为基准吸收残差，避免浮点 0.01 偏差
+      const groupMaterialRounded = Number(materialCostGroup.toFixed(2));
+      const groupAccessoryRounded = Number(costAccessoryCostGroup.toFixed(2));
+      const groupCuttingRounded = Number(costCuttingCostGroup.toFixed(2));
+      const groupTaxRounded = Number(costTaxCostGroup.toFixed(2));
+
+      last.materialCost = Number((groupMaterialRounded - sumOf(others, 'materialCost')).toFixed(2));
+      last.accessoryCost = Number((groupAccessoryRounded - sumOf(others, 'accessoryCost')).toFixed(2));
+      last.cuttingCost = Number((groupCuttingRounded - sumOf(others, 'cuttingCost')).toFixed(2));
+      last.taxCost = Number((groupTaxRounded - sumOf(others, 'taxCost')).toFixed(2));
+      last.totalCost = Number((last.materialCost + last.accessoryCost + last.cuttingCost + last.taxCost).toFixed(2));
+    }
+
     // === V3 双轨制：利润使用真实成本（成本轨道）计算 🆕 ===
     const dualProfit = totalPrice - totalCostReal;
     const dualProfitRate = totalPrice > 0 ? (dualProfit / totalPrice) * 100 : 0;
@@ -602,6 +661,7 @@ export const calculateGroupedResults = (
       actualWeightPerMeter: actualWeightPerMeter,
       priceSource,
       packingComparison,
+      sizeCosts,
     };
 
     // 5. 重量计算逻辑 (使用 actualWeightPerMeter)

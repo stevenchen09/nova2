@@ -191,6 +191,26 @@ export interface GroupResult {
   actualWeightPerMeter?: number;   // 实际使用的线密度 kg/m
   priceSource?: 'exact' | 'reuse' | 'model-fallback'; // 查价来源标记
   packingComparison?: PackingComparison;     // 🆕 排料算法对比结果（FFD vs OPT vs GLB）
+  sizeCosts?: SizeCostDetail[];              // 🆕 按尺寸成本拆分明细
+}
+
+/**
+ * 单个尺寸的成本拆分明细（每个尺寸独立核算成本）
+ *
+ * 材料成本按"切割长度比例"从组级材料总成本分摊而来；
+ * 配件/切工按数量，税金按 costTaxRate。
+ * 各尺寸四项之和严格等于组级成本总额（末项吸收舍入残差）。
+ */
+export interface SizeCostDetail {
+  itemId: string;
+  size: string;           // 如 "50.4x80.4 (外径)"
+  quantity: number;
+  cuttingLength: number;  // 该尺寸用料长度(米)，用于材料成本分摊
+  materialCost: number;   // 分摊后的材料成本
+  accessoryCost: number;  // 配件成本（costAccessoryPrice × 数量）
+  cuttingCost: number;    // 切工成本（costCuttingFee × 数量）
+  taxCost: number;        // 税金（costTaxRate × 小计）
+  totalCost: number;      // 该尺寸成本小计 = 四项之和
 }
 
 /**

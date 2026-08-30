@@ -382,7 +382,77 @@ const CostProfitPanel: React.FC<CostProfitPanelProps> = ({
         </div>
       </div>
 
-      {/* ════════════ Area 5: Material Detail Table ════════════ */}
+      {/* ════════════ Area 5: 按尺寸成本明细（成本轨道）🆕 ════════════ */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-gradient-to-r from-teal-700 to-emerald-700 px-6 py-3 flex items-center justify-between">
+          <h2 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M4 7h16M4 7v10a2 2 0 002 2h12a2 2 0 002-2V7M4 7l2-3h12l2 3M8 12h8" />
+            </svg>
+            按尺寸成本明细（成本轨道）
+          </h2>
+          <span className="text-[10px] text-teal-200 font-semibold">材料成本按切割长度比例分摊</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-left">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">型号</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">颜色</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider">尺寸</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">数量</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">材料</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">配件</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">切工</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">税金</th>
+                <th className="px-4 py-3 text-[10px] font-black text-slate-500 uppercase tracking-wider text-right">成本小计</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {results.flatMap(group =>
+                (group.sizeCosts ?? []).map(sc => ({ group, sc }))
+              ).map(({ group, sc }) => (
+                <tr
+                  key={`${group.model}-${group.color}-${sc.itemId}`}
+                  className="hover:bg-slate-50/80 transition-colors"
+                >
+                  <td className="px-4 py-3 text-sm font-bold text-slate-800">{group.model}</td>
+                  <td className="px-4 py-3 text-sm text-slate-600">{group.color}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700">{sc.size}</td>
+                  <td className="px-4 py-3 text-sm text-slate-700 text-right tabular-nums">{sc.quantity}</td>
+                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                    {showCosts ? `¥${fmt(sc.materialCost)}` : '***'}
+                  </td>
+                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                    {showCosts ? `¥${fmt(sc.accessoryCost)}` : '***'}
+                  </td>
+                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                    {showCosts ? `¥${fmt(sc.cuttingCost)}` : '***'}
+                  </td>
+                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-semibold ${showCosts ? 'text-slate-700' : 'text-slate-300'}`}>
+                    {showCosts ? `¥${fmt(sc.taxCost)}` : '***'}
+                  </td>
+                  <td className={`px-4 py-3 text-sm text-right tabular-nums font-bold ${showCosts ? 'text-indigo-700' : 'text-slate-300'}`}>
+                    {showCosts ? `¥${fmt(sc.totalCost)}` : '***'}
+                  </td>
+                </tr>
+              ))}
+              {/* 合计行 = 组级成本总额 */}
+              <tr className="bg-slate-100/60 font-black">
+                <td className="px-4 py-3.5 text-sm text-slate-800" colSpan={4}>合计</td>
+                <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.totalMaterialCost)}` : '***'}</td>
+                <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.costAccessoryCost)}` : '***'}</td>
+                <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.costCuttingCost)}` : '***'}</td>
+                <td className="px-4 py-3.5 text-sm text-right text-slate-800 tabular-nums">{showCosts ? `¥${fmt(aggregated.costTaxCost)}` : '***'}</td>
+                <td className="px-4 py-3.5 text-sm text-right text-indigo-700 tabular-nums">{showCosts ? `¥${fmt(aggregated.costGrandTotal)}` : '***'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ════════════ Area 6: Material Detail Table ════════════ */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-3 flex items-center justify-between">
           <h2 className="text-xs font-black text-white uppercase tracking-wider">材料成本明细（按型号分组）</h2>
