@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GroupResult, PriceConfig, PricingMode } from '../../types';
 import { BAR_FULL_LENGTH } from '../../constants';
+import NumberInput from '../common/NumberInput';
 
 interface ResultsDashboardProps {
   results: GroupResult[];
@@ -384,30 +385,23 @@ const ResultsDashboard: React.FC<ResultsDashboardProps> = ({
                     {/* 线密度显示 + 手动覆盖输入框 */}
                     {group.actualWeightPerMeter !== undefined && (
                       <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          step="0.001"
+                        <NumberInput
                           min={0}
                           value={effectiveWPM}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (v === '') {
-                              setWeightOverrides((prev) => {
-                                const next = { ...prev };
-                                delete next[groupKey];
-                                return next;
-                              });
-                            } else {
-                              const n = Number(v);
-                              if (!isNaN(n)) {
-                                setWeightOverrides((prev) => ({
-                                  ...prev,
-                                  [groupKey]: n,
-                                }));
-                              }
-                            }
-                          }}
-                          className={`w-16 text-[9px] font-bold rounded-full px-2 py-0.5 border outline-none text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                          onChange={(n) =>
+                            setWeightOverrides((prev) => ({
+                              ...prev,
+                              [groupKey]: n,
+                            }))
+                          }
+                          onEmpty={() =>
+                            setWeightOverrides((prev) => {
+                              const next = { ...prev };
+                              delete next[groupKey];
+                              return next;
+                            })
+                          }
+                          className={`w-16 text-[9px] font-bold rounded-full px-2 py-0.5 border outline-none text-center ${
                             isWeightOverridden
                               ? 'border-amber-300 bg-amber-50 text-amber-700'
                               : 'border-slate-200 bg-slate-100 text-slate-500'

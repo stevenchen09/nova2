@@ -1,5 +1,6 @@
 import React from 'react';
 import { PriceConfig, CostOverride } from '../../types';
+import NumberInput from '../common/NumberInput';
 
 interface CostOverridePanelProps {
   /** 全局默认费率（来自云端 priceConfig） */
@@ -117,17 +118,13 @@ const CostOverridePanel: React.FC<CostOverridePanelProps> = ({
               </label>
               <span className="text-[9px] text-slate-400 font-medium">元/套</span>
             </div>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
               min={0}
               value={displayAccessoryPrice}
               disabled={!isEnabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (!isNaN(v)) handleFieldChange('costAccessoryPrice', v);
-              }}
-              className={`w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+              onChange={(v) => handleFieldChange('costAccessoryPrice', v)}
+              placeholder="如: 10.5"
+              className={`w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border outline-none transition-all ${
                 isEnabled
                   ? 'border-amber-200 bg-amber-50/30 text-slate-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-100'
                   : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed'
@@ -146,17 +143,13 @@ const CostOverridePanel: React.FC<CostOverridePanelProps> = ({
               </label>
               <span className="text-[9px] text-slate-400 font-medium">元/个</span>
             </div>
-            <input
-              type="number"
-              step="0.01"
+            <NumberInput
               min={0}
               value={displayCuttingFee}
               disabled={!isEnabled}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                if (!isNaN(v)) handleFieldChange('costCuttingFee', v);
-              }}
-              className={`w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+              onChange={(v) => handleFieldChange('costCuttingFee', v)}
+              placeholder="如: 2.1"
+              className={`w-full px-2.5 py-1.5 text-sm font-bold rounded-lg border outline-none transition-all ${
                 isEnabled
                   ? 'border-amber-200 bg-amber-50/30 text-slate-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-100'
                   : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed'
@@ -178,18 +171,14 @@ const CostOverridePanel: React.FC<CostOverridePanelProps> = ({
               纯税率（如 0.13 = 13%）
             </span>
           </div>
-          <input
-            type="number"
-            step="0.0001"
+          <NumberInput
             min={0}
             max={1}
             value={displayTaxRate}
             disabled={!isEnabled}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (!isNaN(v)) handleFieldChange('costTaxRate', v);
-            }}
-            className={`w-full px-3 py-2 text-sm font-bold rounded-lg border outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+            onChange={(v) => handleFieldChange('costTaxRate', v)}
+            placeholder="如: 0.13"
+            className={`w-full px-3 py-2 text-sm font-bold rounded-lg border outline-none transition-all ${
               isEnabled
                 ? 'border-amber-200 bg-amber-50/30 text-slate-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-100'
                 : 'border-slate-100 bg-slate-50 text-slate-400 cursor-not-allowed'

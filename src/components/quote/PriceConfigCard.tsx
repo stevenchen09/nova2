@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PriceConfig, PricingMode, Role } from '../../types';
+import NumberInput from '../common/NumberInput';
 
 /** 单个价格字段的配置元信息 */
 interface FieldConfig {
@@ -229,32 +230,16 @@ const PriceConfigCard: React.FC<PriceConfigCardProps> = ({
               <label className="text-[9px] font-black text-slate-400 uppercase ml-1">
                 {field.label}
               </label>
-              <input
-                type="number"
+              <NumberInput
+                value={draft[field.configKey] ?? field.defaultValue}
+                onChange={(val) => {
+                  if (!isReadOnly) handleFieldChange(field, val);
+                }}
                 min={field.min}
                 max={field.max}
-                step={field.step}
-                value={draft[field.configKey] ?? field.defaultValue}
-                onChange={(e) => {
-                  if (isReadOnly) return;
-                  const raw = e.target.value;
-                  if (raw === '' || raw === '-') return;
-                  const val = parseFloat(raw);
-                  if (!isNaN(val)) {
-                    handleFieldChange(field, val);
-                  }
-                }}
-                onBlur={(e) => {
-                  if (isReadOnly) return;
-                  const val = parseFloat(e.target.value);
-                  if (isNaN(val)) return;
-                  const clamped = Math.min(field.max, Math.max(field.min, val));
-                  if (clamped !== val) {
-                    handleFieldChange(field, clamped);
-                  }
-                }}
+                placeholder={String(field.defaultValue)}
                 disabled={isReadOnly}
-                className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-1.5 text-xs font-bold focus:ring-2 ring-indigo-500/20 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                className={`w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-1.5 text-xs font-bold focus:ring-2 ring-indigo-500/20 outline-none ${
                   isReadOnly ? 'opacity-60 cursor-not-allowed bg-slate-100' : ''
                 }`}
               />

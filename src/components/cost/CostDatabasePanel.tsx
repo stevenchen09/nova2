@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CostRecord, PriceConfig, Role, ColorReuseRule } from '../../types';
 import ColorReuseRulesModal from './ColorReuseRulesModal';
+import NumberInput from '../common/NumberInput';
 
 interface CostDatabasePanelProps {
   role: Role;
@@ -388,20 +389,16 @@ const CostDatabasePanel: React.FC<CostDatabasePanelProps> = ({
                     成本配件单价
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
+                    <NumberInput
                       min={0}
                       max={9999}
                       value={costRateDraft.costAccessoryPrice}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         setCostRateDraft((prev) =>
-                          prev
-                            ? { ...prev, costAccessoryPrice: Number(e.target.value) || 0 }
-                            : prev,
+                          prev ? { ...prev, costAccessoryPrice: v } : prev,
                         )
                       }
-                      className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 ring-emerald-500/30 outline-none shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 ring-emerald-500/30 outline-none shadow-sm"
                       placeholder="如: 10.5"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">元/套</span>
@@ -418,20 +415,16 @@ const CostDatabasePanel: React.FC<CostDatabasePanelProps> = ({
                     成本切工费率
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      step="0.01"
+                    <NumberInput
                       min={0}
                       max={9999}
                       value={costRateDraft.costCuttingFee}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         setCostRateDraft((prev) =>
-                          prev
-                            ? { ...prev, costCuttingFee: Number(e.target.value) || 0 }
-                            : prev,
+                          prev ? { ...prev, costCuttingFee: v } : prev,
                         )
                       }
-                      className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 ring-emerald-500/30 outline-none shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 ring-emerald-500/30 outline-none shadow-sm"
                       placeholder="如: 2.1"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">元/个</span>
@@ -448,20 +441,16 @@ const CostDatabasePanel: React.FC<CostDatabasePanelProps> = ({
                     成本税率
                   </label>
                   <div className="relative">
-                    <input
-                      type="number"
-                      step="0.0001"
+                    <NumberInput
                       min={0}
                       max={1}
                       value={costRateDraft.costTaxRate}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         setCostRateDraft((prev) =>
-                          prev
-                            ? { ...prev, costTaxRate: Number(e.target.value) || 0 }
-                            : prev,
+                          prev ? { ...prev, costTaxRate: v } : prev,
                         )
                       }
-                      className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 ring-emerald-500/30 outline-none shadow-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full bg-white border border-emerald-200 rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 ring-emerald-500/30 outline-none shadow-sm"
                       placeholder="如: 0.13"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">纯税率</span>
@@ -536,41 +525,31 @@ const CostDatabasePanel: React.FC<CostDatabasePanelProps> = ({
                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
                       材料底价 (元/米) *
                     </label>
-                    <input
-                      type="number"
+                    <NumberInput
                       required
-                      step="0.01"
                       min={0}
                       max={9999}
                       value={costForm.materialCost}
-                      onChange={(e) =>
-                        setCostForm({
-                          ...costForm,
-                          materialCost: Number(e.target.value),
-                        })
+                      onChange={(v) =>
+                        setCostForm({ ...costForm, materialCost: v })
                       }
                       placeholder="25"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 ring-indigo-500/20 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 ring-indigo-500/20 outline-none"
                     />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">
                       重量 (kg/m)
                     </label>
-                    <input
-                      type="number"
-                      step="0.001"
+                    <NumberInput
                       min={0}
                       max={10}
                       value={costForm.weightPerMeter}
-                      onChange={(e) =>
-                        setCostForm({
-                          ...costForm,
-                          weightPerMeter: Number(e.target.value),
-                        })
+                      onChange={(v) =>
+                        setCostForm({ ...costForm, weightPerMeter: v })
                       }
                       placeholder="0.85"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 ring-indigo-500/20 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs font-bold focus:ring-2 ring-indigo-500/20 outline-none"
                     />
                   </div>
                 </div>
