@@ -356,7 +356,7 @@ export const calculateGroupedResults = (
 
     // 2. 将组内所有尺寸的边长汇总到"待切池"，实现合并算料
     let allEdges: CalculatedEdge[] = [];
-    groupItems.forEach(item => {
+    groupItems.forEach((item, itemIdx) => {
       const widthM = item.width / 100;
       const heightM = item.height / 100;
 
@@ -368,19 +368,30 @@ export const calculateGroupedResults = (
         ? heightM + CUTTING_LOSS + WALL_THICKNESS
         : heightM + CUTTING_LOSS;
 
+      // 🛡 索引键归属：用 item 在 groupItems 中的索引作为 sourceId，
+      // 不依赖 item.id。这样即使 id 缺失/重复，切割边长也能正确归属到对应 item。
+      const itemKey = `__idx_${itemIdx}`;
+
       // 每个框有 2 条横边 2 条纵边
       for (let i = 0; i < item.quantity * 2; i++) {
         allEdges.push({
           length: Number(widthAdj.toFixed(4)),
-          sourceId: item.id,
+          sourceId: itemKey,
           description: `${item.width}x${item.height} ${item.sizeType} (宽)`
         });
         allEdges.push({
           length: Number(heightAdj.toFixed(4)),
-          sourceId: item.id,
+          sourceId: itemKey,
           description: `${item.width}x${item.height} ${item.sizeType} (高)`
         });
       }
+    });
+
+    // 立即聚合每个 item 的切割长度（按索引键归属）
+    // 用于 BATCH 模式按尺寸分摊材料 + 后续 sizeCosts 拆分
+    const perItemCuttingLength: Record<string, number> = {};
+    allEdges.forEach(e => {
+      perItemCuttingLength[e.sourceId] = (perItemCuttingLength[e.sourceId] || 0) + e.length;
     });
 
     // 三算法并行：FFD + Optimal(DP背包) + GLB(全局套裁)
@@ -509,17 +520,32 @@ export const calculateGroupedResults = (
     if (config.mode === PricingMode.BATCH) {
       // ── 批量单模式 ──
       // V4 修复：切工费改为"按个"计算（元/个 × 数量），不再按米×长度
-      const avgMeters = (totalBars * BAR_FULL_LENGTH) / totalQuantity;
-      // 单框切割工费 = quoteCuttingFee（每框固定工费，不再除以长度）
+      // V5 修复：每个尺寸单独算单价（按切割长度比例分摊材料），不同尺寸不同报价
+      //   - 总材料费 = totalBars × 3.15m × materialPrice（按整料计算）
+      //   - 每个 item 按切割长度比例分配材料费 → 单框材料 = item材料 / qty
+      //   - 配件/切工：qty × 单价（每框固定）
+      //   - 税金：(材料 + 配件 + 切工) × quoteTaxRate
+      //   - 单框总价 = (item材料 + qty×配件 + qty×切工) × (1 + tax) / qty
       const perFrameCuttingCost = config.quoteCuttingFee;
-      const uPrice = ((avgMeters * config.materialPrice) + config.quoteAccessoryPrice + perFrameCuttingCost) * (1 + config.quoteTaxRate);
+      const totalMaterialForQuote = totalBars * BAR_FULL_LENGTH * config.materialPrice;
 
-      groupItems.forEach(item => {
-        const itemTotal = uPrice * item.quantity;
+      groupItems.forEach((item, idx) => {
+        const itemKey = `__idx_${idx}`;
+        const itemCutLen = perItemCuttingLength[itemKey] || 0;
+        const itemRatio = totalCuttingLength > 0 ? itemCutLen / totalCuttingLength : 0;
+        // 该尺寸分摊的材料总成本
+        const itemMaterial = totalMaterialForQuote * itemRatio;
+        const itemAccessory = item.quantity * config.quoteAccessoryPrice;
+        const itemCutting = item.quantity * perFrameCuttingCost;
+        const itemSubTotal = itemMaterial + itemAccessory + itemCutting;
+        const itemTax = itemSubTotal * config.quoteTaxRate;
+        const itemTotal = itemSubTotal + itemTax;
+        const itemUnitPrice = itemTotal / item.quantity;
+
         totalPrice += itemTotal;
         lineItems.push({
           id: item.id, model, color, size: `${item.width}x${item.height} (${item.sizeType})`,
-          unitPrice: Number(uPrice.toFixed(2)), quantity: item.quantity, totalPrice: Number(itemTotal.toFixed(2))
+          unitPrice: Number(itemUnitPrice.toFixed(2)), quantity: item.quantity, totalPrice: Number(itemTotal.toFixed(2))
         });
       });
 
@@ -586,18 +612,17 @@ export const calculateGroupedResults = (
 
     // === 按尺寸成本拆分 🆕 ===
     // 材料成本按"切割长度比例"分摊：批量单按实际切割长度（allEdges 中 sourceId 归集），
-    // 零散单按周长×1.2×数量。配件/切工按数量，税金按成本税率。
-    const perItemCuttingLength: Record<string, number> = {};
-    allEdges.forEach(e => {
-      perItemCuttingLength[e.sourceId] = (perItemCuttingLength[e.sourceId] || 0) + e.length;
-    });
+// 零散单按周长×1.2×数量。配件/切工按数量，税金按成本税率。
+    // (perItemCuttingLength 已在 allEdges 生成后立即聚合)
 
-    const sizeCosts: SizeCostDetail[] = groupItems.map(item => {
+const sizeCosts: SizeCostDetail[] = groupItems.map((item, idx) => {
       const qty = item.quantity;
       let itemCutLen: number;
       let itemMaterial: number;
+      // 🛡 与 allEdges 的索引键归属一致，确保切割边长正确归属
+      const itemKey = `__idx_${idx}`;
       if (config.mode === PricingMode.BATCH) {
-        itemCutLen = perItemCuttingLength[item.id] || 0;
+        itemCutLen = perItemCuttingLength[itemKey] || 0;
         itemMaterial = totalCuttingLength > 0
           ? (itemCutLen / totalCuttingLength) * materialCostGroup
           : 0;
