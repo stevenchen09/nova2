@@ -34,5 +34,8 @@ yarn-error.log*
 # CloudBase local config (may contain secrets)
 .cloudbase/
 
+# WorkBuddy project data (not source code)
+.workbuddy/
+
 # Lock files that shouldn't be committed
 package-lock.json.bak
